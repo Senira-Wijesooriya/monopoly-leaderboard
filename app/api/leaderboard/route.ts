@@ -9,19 +9,25 @@ export async function GET() {
     if (!keys || keys.length === 0) return NextResponse.json([]);
     
     const players = await Promise.all(
-      keys.map(async (key: string) => {
-        const name = key.replace('player:', '');
-        const data = await redis.hgetall(key) as Record<string, string>;
-        return { 
-          name, 
-          wins: parseInt(data?.wins || '0'),
-          nickname: data?.nickname || 'The Tycoon',
-          avatar: data?.avatar || '🎩',
-          country: data?.country || '🏛️ Government',
-          color: data?.color || '#ffffff',
-          gamingTags: data?.gamingTags || '[]'
-        };
-      })
+      keys
+        .filter((key: string) => {
+          const name = key.replace('player:', '').toUpperCase();
+          // Filter out accidental system keys or settings strings
+          return !name.includes('SETTINGS') && !name.includes('GLOBAL');
+        })
+        .map(async (key: string) => {
+          const name = key.replace('player:', '');
+          const data = await redis.hgetall(key) as Record<string, string>;
+          return { 
+            name, 
+            wins: parseInt(data?.wins || '0'),
+            nickname: data?.nickname || 'The Tycoon',
+            avatar: data?.avatar || '🎩',
+            country: data?.country || '🏛️ Government',
+            color: data?.color || '#ffffff',
+            gamingTags: data?.gamingTags || '[]'
+          };
+        })
     );
     
     players.sort((a, b) => b.wins - a.wins);

@@ -1,11 +1,10 @@
 class RedisClient {
   private url = process.env.UPSTASH_REDIS_REST_URL || '';
   private token = process.env.UPSTASH_REDIS_REST_TOKEN || '';
-  private memoryHash: Record<string, Record<string, string>> = {
-    'player:Senira': { wins: '3', nickname: 'The Mastermind', avatar: '🎩', country: '🇧🇷 Brazil', color: '#facc15', gamingTags: '["Hacker","Tycoon"]' }
-  };
+  
+  // Start completely empty so deleted users never magically come back
+  private memoryHash: Record<string, Record<string, string>> = {};
   private memoryList: Record<string, string[]> = {
-    'history:Senira': [new Date().toISOString()],
     'monopoly_comments': []
   };
 
