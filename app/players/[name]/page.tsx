@@ -43,17 +43,21 @@ function getFlagBackgroundUrl(country: string) {
   if (country.includes("France")) return "https://flagcdn.com/w1280/fr.png";
   if (country.includes("UK")) return "https://flagcdn.com/w1280/gb.png";
   if (country.includes("USA")) return "https://flagcdn.com/w1280/us.png";
-  // Classic Roman/Government Pillar Icon for Government
   return "https://upload.wikimedia.org/wikipedia/commons/thumb/c/ce/Icon_of_a_classical_building.svg/1024px-Icon_of_a_classical_building.svg.png";
 }
 
 export default async function PlayerPage({ params }: { params: { name: string } }) {
-  const name = decodeURIComponent(params.name);
+  // Correctly decode URL parameter spaces and special characters
+  const name = decodeURIComponent(params.name || '').trim();
   const data = await redis.hgetall(`player:${name}`) as Record<string, string>;
+  
   const nickname = data?.nickname || 'The Tycoon';
   const avatar = data?.avatar || '🎩';
   const country = data?.country || '🏛️ Government';
   
+  let gamingTags = [];
+  try { gamingTags = JSON.parse(data?.gamingTags || '[]'); } catch(e) {}
+
   const history = await redis.lrange(`history:${name}`, 0, -1) as string[];
   const randomCaption = CAPTIONS[Math.floor(Math.random() * CAPTIONS.length)];
   const backgroundUrl = getFlagBackgroundUrl(country);
@@ -65,12 +69,9 @@ export default async function PlayerPage({ params }: { params: { name: string } 
           &larr; Back to Board
         </Link>
         
-        {/* TITLE DEED WITH FLAG BACKGROUND */}
         <div className="bg-white border-4 border-black rounded-sm p-10 mb-12 shadow-[12px_12px_0px_rgba(0,0,0,1)] text-center relative overflow-hidden flex flex-col items-center">
-          
-          {/* Faded Background Image */}
           <div 
-            className="absolute inset-0 z-0 opacity-15 bg-center bg-no-repeat bg-contain m-8"
+            className="absolute inset-0 z-0 opacity-20 bg-center bg-no-repeat bg-contain m-8"
             style={{ backgroundImage: `url(${backgroundUrl})` }}
           />
 
@@ -79,25 +80,33 @@ export default async function PlayerPage({ params }: { params: { name: string } 
           </div>
           
           <div className="w-32 h-32 mx-auto rounded-full border-4 border-black overflow-hidden flex items-center justify-center text-6xl bg-gray-100 mb-6 mt-6 z-10 shadow-lg">
-             {avatar.startsWith('data:image') ? <img src={avatar} alt={name} className="w-full h-full object-cover"/> : avatar}
+             {avatar?.startsWith('data:image') ? <img src={avatar} alt={name} className="w-full h-full object-cover"/> : (avatar || '🎩')}
           </div>
           
           <h1 className="text-5xl md:text-6xl font-black uppercase text-black tracking-tighter z-10">{name}</h1>
-          <p className="text-2xl text-gray-700 italic mt-2 font-serif font-bold mb-4 z-10">"{nickname}"</p>
+          <p className="text-2xl text-gray-700 italic mt-2 font-serif font-bold mb-3 z-10">"{nickname}"</p>
           
+          {gamingTags.length > 0 && (
+            <div className="flex flex-wrap justify-center gap-2 mb-4 z-10">
+              {gamingTags.map((tag: string, i: number) => (
+                <span key={i} className="text-xs bg-purple-100 text-purple-900 font-mono px-3 py-1 rounded-full border-2 border-black font-bold shadow-[2px_2px_0px_rgba(0,0,0,1)]">
+                  @{tag}
+                </span>
+              ))}
+            </div>
+          )}
+
           <div className="inline-block bg-yellow-400 border-2 border-black font-black px-4 py-1 uppercase shadow-[4px_4px_0px_rgba(0,0,0,1)] mb-8 z-10">
             Primary Market: {country}
           </div>
 
-          {/* Random Caption replacing Properties Box */}
           <div className="w-full border-t-2 border-black border-dashed pt-6 z-10 mt-auto">
-             <p className="text-2xl font-black font-serif italic text-gray-900 bg-white/60 p-2 rounded">
+             <p className="text-2xl font-black font-serif italic text-gray-900 bg-white/80 p-3 rounded border border-black shadow-inner">
                "{randomCaption}"
              </p>
           </div>
         </div>
 
-        {/* MATCH HISTORY */}
         <h2 className="text-3xl font-black mb-6 border-b-4 border-black pb-4 uppercase tracking-tighter text-black flex items-center gap-3">
           <span className="bg-black text-white px-3 py-1 rounded shadow-[2px_2px_0px_rgba(255,255,255,1)]">⚔️</span> Match History
         </h2>

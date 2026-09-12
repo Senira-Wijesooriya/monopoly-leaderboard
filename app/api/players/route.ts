@@ -4,14 +4,23 @@ import redis from '@/lib/redis';
 export const dynamic = 'force-dynamic';
 
 export async function POST(req: Request) {
-  const { name, nickname, avatar, country, color, action } = await req.json();
+  const { name, nickname, avatar, country, color, gamingTags, action } = await req.json();
   
   if (action === 'add') {
-    // Defaults to Government and White color on creation
-    await redis.hset(`player:${name}`, { wins: 0, nickname, avatar, country: '🏛️ Government', color: '#ffffff' });
+    await redis.hset(`player:${name}`, { 
+      wins: 0, 
+      nickname: nickname || 'The Tycoon', 
+      avatar: avatar || '🎩', 
+      country: country || '🏛️ Government', 
+      color: '#ffffff',
+      gamingTags: JSON.stringify(gamingTags || [])
+    });
   } else if (action === 'update_profile') {
-    // Updates just the country and color for a specific user
-    await redis.hset(`player:${name}`, { country, color });
+    await redis.hset(`player:${name}`, { 
+      country: country || '🏛️ Government', 
+      color: color || '#ffffff',
+      gamingTags: JSON.stringify(gamingTags || [])
+    });
   } else if (action === 'win') {
     await redis.hincrby(`player:${name}`, 'wins', 1);
     await redis.lpush(`history:${name}`, new Date().toISOString());

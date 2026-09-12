@@ -28,20 +28,14 @@ function getRankTitle(rank: number, total: number) {
 
 export default function Home() {
   const [players, setPlayers] = useState<any[]>([]);
-  const [topCountry, setTopCountry] = useState("🏛️ Government");
+  const [topRegion, setTopRegion] = useState("🇱🇰 Sri Lanka");
 
   useEffect(() => {
     fetch("/api/leaderboard").then(res => res.json()).then(data => {
       setPlayers(data);
-      if (data.length > 0) {
-        const countryCounts = data.reduce((acc: any, p: any) => {
-          const c = p.country || "🏛️ Government";
-          acc[c] = (acc[c] || 0) + p.wins;
-          return acc;
-        }, {});
-        const max = Object.keys(countryCounts).reduce((a, b) => countryCounts[a] > countryCounts[b] ? a : b);
-        setTopCountry(max);
-      }
+    });
+    fetch("/api/settings").then(res => res.json()).then(settings => {
+      if (settings.topRegion) setTopRegion(settings.topRegion);
     });
   }, []);
 
@@ -50,10 +44,13 @@ export default function Home() {
       <ParticleBackground />
 
       <div className="relative z-10 container mx-auto px-4 py-12 max-w-6xl">
+        {/* Most Demanding Region Banner */}
         <div className="flex justify-center mb-8">
           <div className="bg-red-600 border-2 border-black px-6 py-2 rounded shadow-[4px_4px_0px_rgba(0,0,0,1)] flex items-center gap-3">
             <span className="text-white font-bold uppercase tracking-widest text-sm">Most Demanding Region:</span>
-            <span className="text-2xl font-black bg-white px-3 py-1 rounded text-black border border-black shadow-inner">{topCountry}</span>
+            <span className="text-2xl font-black bg-white px-3 py-1 rounded text-black border border-black shadow-inner flex items-center gap-2">
+              {topRegion}
+            </span>
           </div>
         </div>
 
@@ -74,17 +71,18 @@ export default function Home() {
         <div className="space-y-6 mb-20">
           {players.sort((a, b) => b.wins - a.wins).map((player: any, index: number) => {
             const rank = index + 1;
-            // Use player's assigned color or default to white
             const boxColor = player.color && player.color !== '#ffffff' ? player.color : '#ffffff';
+            let parsedTags = [];
+            try { parsedTags = JSON.parse(player.gamingTags || '[]'); } catch(e) {}
 
             return (
               <div key={player.name}>
-                <Link href={`/players/${player.name}`}>
+                <Link href={`/players/${encodeURIComponent(player.name)}`}>
                   <TiltCard className="group relative cursor-pointer block">
                     <div className="relative bg-white border-4 border-black shadow-[8px_8px_0px_rgba(0,0,0,1)] group-hover:shadow-[12px_12px_0px_rgba(220,38,38,1)] group-hover:-translate-y-1 rounded-xl p-4 flex items-center gap-4 transition-all">
                       
                       <div 
-                        className="w-16 h-16 rounded flex items-center justify-center font-black text-3xl border-2 border-black text-black"
+                        className="w-16 h-16 rounded flex items-center justify-center font-black text-3xl border-2 border-black text-black shrink-0"
                         style={{ backgroundColor: boxColor }}
                       >
                         #{rank}
@@ -96,11 +94,16 @@ export default function Home() {
 
                       <div className="flex-grow min-w-0">
                         <h3 className="text-2xl font-black text-black truncate uppercase tracking-tight">{player.name}</h3>
-                        <div className="flex items-center gap-3 mt-1">
-                          <span className="text-sm text-gray-900 font-bold bg-gray-200 px-2 py-0.5 rounded border border-gray-400 uppercase tracking-widest shadow-sm">
+                        <div className="flex flex-wrap items-center gap-2 mt-1">
+                          <span className="text-xs text-gray-900 font-bold bg-gray-200 px-2 py-0.5 rounded border border-gray-400 uppercase tracking-widest shadow-sm">
                             {getRankTitle(rank, players.length)}
                           </span>
                           <span className="text-sm font-bold">{player.country || "🏛️ Government"}</span>
+                          {parsedTags.map((tag: string, i: number) => (
+                            <span key={i} className="text-xs bg-purple-100 text-purple-800 font-mono px-2 py-0.5 rounded border border-purple-300">
+                              @{tag}
+                            </span>
+                          ))}
                         </div>
                       </div>
 

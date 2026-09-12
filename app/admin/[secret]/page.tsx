@@ -12,19 +12,30 @@ export default function AdminPage() {
   const [name, setName] = useState('');
   const [nickname, setNickname] = useState('');
   const [avatarBase64, setAvatarBase64] = useState('🎩'); 
+  const [topRegion, setTopRegion] = useState("🇱🇰 Sri Lanka");
   
-  // Track inline edits for Country & Color
-  const [editStates, setEditStates] = useState<Record<string, { country: string, color: string }>>({});
+  const [editStates, setEditStates] = useState<Record<string, { country: string, color: string, tag1: string, tag2: string, tag3: string }>>({});
 
   useEffect(() => {
     fetch('/api/leaderboard').then(res => res.json()).then(data => {
       setPlayers(data);
-      // Initialize edit states for each player
-      const initialEdits: Record<string, { country: string, color: string }> = {};
+      const initialEdits: any = {};
       data.forEach((p: any) => {
-        initialEdits[p.name] = { country: p.country || COUNTRIES[8], color: p.color || '#ffffff' };
+        let tags = [];
+        try { tags = JSON.parse(p.gamingTags || '[]'); } catch(e) {}
+        initialEdits[p.name] = { 
+          country: p.country || COUNTRIES[8], 
+          color: p.color || '#ffffff',
+          tag1: tags[0] || '',
+          tag2: tags[1] || '',
+          tag3: tags[2] || ''
+        };
       });
       setEditStates(initialEdits);
+    });
+
+    fetch('/api/settings').then(res => res.json()).then(settings => {
+      if (settings.topRegion) setTopRegion(settings.topRegion);
     });
   }, []);
 
@@ -49,12 +60,24 @@ export default function AdminPage() {
 
   const savePlayerProfile = async (playerName: string) => {
     const state = editStates[playerName];
+    const gamingTags = [state.tag1, state.tag2, state.tag3].filter(t => t.trim() !== '');
     await fetch('/api/players', { 
       method: 'POST', 
-      body: JSON.stringify({ name: playerName, country: state.country, color: state.color, action: 'update_profile' }) 
+      body: JSON.stringify({ 
+        name: playerName, 
+        country: state.country, 
+        color: state.color, 
+        gamingTags, 
+        action: 'update_profile' 
+      }) 
     });
     alert(`${playerName}'s Profile Saved!`);
     window.location.reload();
+  };
+
+  const saveGlobalSettings = async () => {
+    await fetch('/api/settings', { method: 'POST', body: JSON.stringify({ topRegion }) });
+    alert("Most Demanding Region updated!");
   };
 
   const updateWin = async (playerName: string, action: 'win' | 'lose') => {
@@ -71,10 +94,30 @@ export default function AdminPage() {
   return (
     <div className="min-h-screen bg-[#cfe0e0] text-black p-8 font-sans pb-24">
       <div className="max-w-5xl mx-auto">
-        <div className="bg-red-600 border-4 border-white outline outline-4 outline-black shadow-[8px_8px_0px_rgba(0,0,0,1)] px-8 py-4 mb-12 text-center">
+        <div className="bg-red-600 border-4 border-black shadow-[8px_8px_0px_rgba(0,0,0,1)] px-8 py-4 mb-12 text-center">
           <h1 className="text-4xl md:text-5xl font-black text-white uppercase tracking-tighter">
             MONOPOLY Administrator
           </h1>
+        </div>
+
+        {/* Global Settings: Most Demanding Region */}
+        <div className="bg-white p-8 rounded-xl border-4 border-black mb-12 shadow-[12px_12px_0px_rgba(0,0,0,1)]">
+          <h2 className="text-2xl font-black mb-4 text-black uppercase tracking-tight">Global Header Settings</h2>
+          <div className="flex flex-col md:flex-row gap-4 items-center">
+            <div className="flex-1 w-full">
+              <label className="block font-bold mb-2">Most Demanding Region Text:</label>
+              <input 
+                type="text" 
+                value={topRegion} 
+                onChange={e => setTopRegion(e.target.value)}
+                placeholder="e.g. 🇱🇰 Sri Lanka"
+                className="w-full p-3 border-2 border-black font-bold bg-gray-100"
+              />
+            </div>
+            <button onClick={saveGlobalSettings} className="px-6 py-4 bg-green-500 border-2 border-black font-black uppercase shadow-[4px_4px_0px_rgba(0,0,0,1)] mt-6">
+              Update Banner
+            </button>
+          </div>
         </div>
         
         {/* ADD PLAYER */}
@@ -102,46 +145,54 @@ export default function AdminPage() {
           <h2 className="text-2xl font-black mb-6 text-black uppercase tracking-tight">Manage Player Profiles & Rents</h2>
           <div className="grid grid-cols-1 gap-6">
             {players.map(p => (
-              <div key={p.name} className="flex flex-col md:flex-row items-center justify-between p-4 bg-yellow-100 border-2 border-black shadow-[4px_4px_0px_rgba(0,0,0,1)] rounded-lg">
+              <div key={p.name} className="flex flex-col gap-4 p-5 bg-yellow-100 border-2 border-black shadow-[4px_4px_0px_rgba(0,0,0,1)] rounded-lg">
                 
-                {/* Player Identity */}
-                <div className="flex items-center gap-4 w-full md:w-auto mb-4 md:mb-0">
-                  <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-black flex items-center justify-center text-2xl bg-white shrink-0">
-                    {p.avatar?.startsWith('data:image') ? <img src={p.avatar} alt={p.name} className="w-full h-full object-cover"/> : (p.avatar || '🎩')}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-black flex items-center justify-center text-2xl bg-white shrink-0">
+                      {p.avatar?.startsWith('data:image') ? <img src={p.avatar} alt={p.name} className="w-full h-full object-cover"/> : (p.avatar || '🎩')}
+                    </div>
+                    <div>
+                      <div className="font-black text-lg uppercase leading-none">{p.name}</div>
+                      <div className="text-sm font-bold text-gray-700">Wins: {p.wins}</div>
+                    </div>
                   </div>
-                  <div>
-                    <div className="font-black text-lg uppercase leading-none">{p.name}</div>
-                    <div className="text-sm font-bold text-gray-700">Wins: {p.wins}</div>
+
+                  <div className="flex gap-2">
+                    <button onClick={() => updateWin(p.name, 'win')} className="w-10 h-10 bg-green-500 border-2 border-black shadow-[2px_2px_0px_rgba(0,0,0,1)] rounded font-black text-xl flex items-center justify-center text-black" title="Add Win">+</button>
+                    <button onClick={() => updateWin(p.name, 'lose')} className="w-10 h-10 bg-orange-500 border-2 border-black shadow-[2px_2px_0px_rgba(0,0,0,1)] rounded font-black text-xl flex items-center justify-center text-black" title="Remove Win">-</button>
+                    <button onClick={() => deletePlayer(p.name)} className="w-10 h-10 bg-red-600 border-2 border-black shadow-[2px_2px_0px_rgba(0,0,0,1)] rounded font-black text-xl flex items-center justify-center text-white ml-2" title="Delete Player">X</button>
                   </div>
                 </div>
 
-                {/* Profile Controls (Country & Color) */}
+                {/* Inline Edits for Country, Color, and Gaming Tags */}
                 {editStates[p.name] && (
-                  <div className="flex items-center gap-2 bg-white p-2 border-2 border-black rounded w-full md:w-auto mb-4 md:mb-0">
+                  <div className="flex flex-col md:flex-row items-center gap-3 bg-white p-4 border-2 border-black rounded">
                     <select 
                       value={editStates[p.name].country} 
                       onChange={e => setEditStates({...editStates, [p.name]: { ...editStates[p.name], country: e.target.value }})}
-                      className="p-2 border-2 border-black font-bold cursor-pointer bg-gray-100"
+                      className="p-2 border-2 border-black font-bold cursor-pointer bg-gray-100 w-full md:w-auto"
                     >
                       {COUNTRIES.map(c => <option key={c} value={c}>{c}</option>)}
                     </select>
+
                     <input 
                       type="color" 
-                      title="Player Box Color"
+                      title="Rank Box Color"
                       value={editStates[p.name].color}
                       onChange={e => setEditStates({...editStates, [p.name]: { ...editStates[p.name], color: e.target.value }})}
-                      className="w-10 h-10 border-2 border-black p-0 cursor-pointer"
+                      className="w-10 h-10 border-2 border-black p-0 cursor-pointer shrink-0"
                     />
-                    <button onClick={() => savePlayerProfile(p.name)} className="bg-blue-600 text-white px-4 py-2 font-black border-2 border-black uppercase text-sm">Save</button>
+
+                    <div className="flex gap-1 w-full md:w-auto flex-1">
+                      <input placeholder="Tag 1" value={editStates[p.name].tag1} onChange={e => setEditStates({...editStates, [p.name]: { ...editStates[p.name], tag1: e.target.value }})} className="p-2 border-2 border-black text-xs w-full font-mono"/>
+                      <input placeholder="Tag 2" value={editStates[p.name].tag2} onChange={e => setEditStates({...editStates, [p.name]: { ...editStates[p.name], tag2: e.target.value }})} className="p-2 border-2 border-black text-xs w-full font-mono"/>
+                      <input placeholder="Tag 3" value={editStates[p.name].tag3} onChange={e => setEditStates({...editStates, [p.name]: { ...editStates[p.name], tag3: e.target.value }})} className="p-2 border-2 border-black text-xs w-full font-mono"/>
+                    </div>
+
+                    <button onClick={() => savePlayerProfile(p.name)} className="bg-blue-600 text-white px-6 py-2 font-black border-2 border-black uppercase text-sm w-full md:w-auto">Save</button>
                   </div>
                 )}
-
-                {/* Match Controls */}
-                <div className="flex gap-2 w-full md:w-auto justify-end">
-                  <button onClick={() => updateWin(p.name, 'win')} className="w-10 h-10 bg-green-500 border-2 border-black shadow-[2px_2px_0px_rgba(0,0,0,1)] hover:translate-y-0.5 hover:shadow-none rounded font-black text-xl flex items-center justify-center text-black" title="Add Win">+</button>
-                  <button onClick={() => updateWin(p.name, 'lose')} className="w-10 h-10 bg-orange-500 border-2 border-black shadow-[2px_2px_0px_rgba(0,0,0,1)] hover:translate-y-0.5 hover:shadow-none rounded font-black text-xl flex items-center justify-center text-black" title="Remove Win">-</button>
-                  <button onClick={() => deletePlayer(p.name)} className="w-10 h-10 bg-red-600 border-2 border-black shadow-[2px_2px_0px_rgba(0,0,0,1)] hover:translate-y-0.5 hover:shadow-none rounded font-black text-xl flex items-center justify-center text-white ml-2" title="Delete Player">X</button>
-                </div>
               </div>
             ))}
           </div>
