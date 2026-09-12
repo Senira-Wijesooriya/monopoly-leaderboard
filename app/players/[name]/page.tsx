@@ -4,7 +4,7 @@ import { ArrowLeft } from "lucide-react";
 import { getLeaderboard } from "@/lib/redis";
 import Hero from "@/components/Hero";
 import WinHistory from "@/components/WinHistory";
-import TokenIcon from "@/components/TokenIcon";
+import Avatar from "@/components/Avatar";
 
 export const dynamic = "force-dynamic";
 
@@ -16,29 +16,40 @@ export default async function PlayerPage({
   const { name: rawName } = await params;
   const name = decodeURIComponent(rawName);
   const data = await getLeaderboard();
-  const wins = data.players[name];
+  const player = data.players[name];
 
-  if (!wins) notFound();
+  if (!player) notFound();
 
   return (
     <main className="min-h-screen pb-16">
-      <Hero eyebrow={name} subtitle={`${wins.length} ${wins.length === 1 ? "win" : "wins"} logged`} />
+      <Hero
+        eyebrow={name}
+        subtitle={`${player.wins.length} ${player.wins.length === 1 ? "win" : "wins"} logged`}
+      />
 
       <div className="px-4 pt-10">
         <div className="mx-auto mb-6 flex max-w-md items-center gap-3">
-          <span className="flex h-9 w-9 items-center justify-center rounded-full border-2 border-board bg-board/5">
-            <TokenIcon name={name} className="h-4.5 w-4.5 text-board" />
-          </span>
+          <Avatar
+            name={name}
+            avatarUrl={player.avatarUrl}
+            className="h-9 w-9 rounded-full border-2 border-board bg-board/5"
+            iconClassName="h-4.5 w-4.5 text-board"
+          />
+          <div className="min-w-0 flex-1">
+            {player.nickname && (
+              <p className="truncate text-sm italic text-cream/70">&ldquo;{player.nickname}&rdquo;</p>
+            )}
+          </div>
           <Link
             href="/"
-            className="flex items-center gap-1.5 text-sm text-chest hover:underline"
+            className="flex shrink-0 items-center gap-1.5 text-sm text-chest hover:underline"
           >
             <ArrowLeft className="h-4 w-4" />
             Back to leaderboard
           </Link>
         </div>
 
-        <WinHistory dates={wins.map((w) => w.date)} />
+        <WinHistory dates={player.wins.map((w) => w.date)} />
       </div>
     </main>
   );

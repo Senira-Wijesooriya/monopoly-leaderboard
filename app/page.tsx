@@ -1,11 +1,12 @@
-import { getLeaderboard, sortedPlayers } from "@/lib/redis";
+import { getLeaderboard, getComments, sortedPlayers } from "@/lib/redis";
 import Hero from "@/components/Hero";
 import LeaderboardBars from "@/components/LeaderboardBars";
+import CommentsSection from "@/components/CommentsSection";
 
 export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
-  const data = await getLeaderboard();
+  const [data, comments] = await Promise.all([getLeaderboard(), getComments()]);
   const players = sortedPlayers(data);
   const totalGames = players.reduce((sum, p) => sum + p.total, 0);
 
@@ -20,6 +21,9 @@ export default async function HomePage() {
       />
       <div className="px-4 pt-10">
         <LeaderboardBars players={players} />
+      </div>
+      <div className="mt-14 px-4">
+        <CommentsSection initialComments={comments} />
       </div>
     </main>
   );

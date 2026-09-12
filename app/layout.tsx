@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Monopoly Night Leaderboard",
+  title: "M-Polly",
   description: "Who's actually winning game night.",
 };
 

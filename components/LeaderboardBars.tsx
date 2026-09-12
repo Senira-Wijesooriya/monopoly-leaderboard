@@ -3,10 +3,10 @@
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { ChevronRight, Dices } from "lucide-react";
-import TokenIcon from "./TokenIcon";
+import Avatar from "./Avatar";
 import AnimatedNumber from "./AnimatedNumber";
 
-type Player = { name: string; total: number };
+type Player = { name: string; nickname?: string; avatarUrl?: string; total: number };
 
 export default function LeaderboardBars({ players }: { players: Player[] }) {
   if (players.length === 0) {
@@ -35,13 +35,23 @@ export default function LeaderboardBars({ players }: { players: Player[] }) {
                   {i + 1}
                 </span>
 
-                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-2 border-board bg-board/5">
-                  <TokenIcon name={p.name} className="h-5 w-5 text-board" />
-                </span>
+                <Avatar
+                  name={p.name}
+                  avatarUrl={p.avatarUrl}
+                  className="h-10 w-10 shrink-0 rounded-full border-2 border-board bg-board/5"
+                  iconClassName="h-5 w-5 text-board"
+                />
 
                 <div className="min-w-0 flex-1">
                   <div className="mb-1.5 flex items-baseline justify-between gap-3">
-                    <span className="truncate font-semibold text-ink">{p.name}</span>
+                    <span className="min-w-0">
+                      <span className="block truncate font-semibold text-ink">{p.name}</span>
+                      {p.nickname && (
+                        <span className="block truncate text-xs italic text-ink/50">
+                          &ldquo;{p.nickname}&rdquo;
+                        </span>
+                      )}
+                    </span>
                     <span className="font-display shrink-0 text-2xl text-brick">
                       <AnimatedNumber value={p.total} delayMs={150 + i * 80} />
                       <span className="ml-1 text-xs font-body font-normal text-ink/60">

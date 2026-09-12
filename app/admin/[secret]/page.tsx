@@ -1,7 +1,8 @@
 import { notFound } from "next/navigation";
-import { getLeaderboard } from "@/lib/redis";
+import { getLeaderboard, getComments } from "@/lib/redis";
 import Hero from "@/components/Hero";
 import AdminForm from "@/components/AdminForm";
+import CommentsSection from "@/components/CommentsSection";
 
 export const dynamic = "force-dynamic";
 
@@ -19,12 +20,15 @@ export default async function AdminPage({
     notFound();
   }
 
-  const data = await getLeaderboard();
+  const [data, comments] = await Promise.all([getLeaderboard(), getComments()]);
 
   return (
     <main className="min-h-screen pb-16">
       <Hero eyebrow="Banker's Desk" subtitle="Only visible to you — bookmark this page." />
       <AdminForm secret={secret} initialData={data} />
+      <div className="mt-4 px-4">
+        <CommentsSection initialComments={comments} adminSecret={secret} />
+      </div>
     </main>
   );
 }

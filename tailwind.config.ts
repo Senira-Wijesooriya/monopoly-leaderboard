@@ -5,11 +5,11 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        board: "#0F5132", // deep felt green
-        cream: "#F3E7C9", // deed-card paper
+        board: "#3D1E63", // deep royal purple, brand background
+        cream: "#F6ECD2", // deed-card paper
         ink: "#221C10", // near-black warm text
-        gold: "#C89B3C", // banknote gold
-        brick: "#9C2B1E", // primary action red
+        gold: "#F0B429", // banknote gold
+        brick: "#E31B23", // monopoly red, primary action
         chest: "#1F5C8B", // community chest blue
       },
       fontFamily: {
