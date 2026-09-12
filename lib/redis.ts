@@ -1,116 +1,109 @@
-class RedisClient {
-  private url = process.env.UPSTASH_REDIS_REST_URL || '';
-  private token = process.env.UPSTASH_REDIS_REST_TOKEN || '';
-  
-  // Start completely empty so deleted users never magically come back
-  private memoryHash: Record<string, Record<string, string>> = {};
-  private memoryList: Record<string, string[]> = {
-    'monopoly_comments': []
-  };
+import { kv } from '@vercel/kv';
 
-  private async request(command: any[]) {
-    if (!this.url || !this.token) return null;
+// Wrapper class using official @vercel/kv SDK for bulletproof persistence
+class VercelKVClient {
+  async keys(pattern: string) {
     try {
-      const res = await fetch(this.url, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${this.token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify(command),
-      });
-      const data = await res.json();
-      return data.result;
+      return await kv.keys(pattern);
     } catch (e) {
+      console.error("KV keys error:", e);
+      return [];
+    }
+  }
+
+  async hgetall(key: string) {
+    try {
+      const data = await kv.hgetall(key);
+      return data || {};
+    } catch (e) {
+      console.error("KV hgetall error:", e);
+      return {};
+    }
+  }
+
+  async hset(key: string, value: Record<string, any>) {
+    try {
+      return await kv.hset(key, value);
+    } catch (e) {
+      console.error("KV hset error:", e);
+      return 0;
+    }
+  }
+
+  async hincrby(key: string, field: string, increment: number) {
+    try {
+      return await kv.hincrby(key, field, increment);
+    } catch (e) {
+      console.error("KV hincrby error:", e);
+      return 0;
+    }
+  }
+
+  async exists(key: string): Promise<number> {
+    try {
+      const res = await kv.exists(key);
+      return res ? 1 : 0;
+    } catch (e) {
+      console.error("KV exists error:", e);
+      return 0;
+    }
+  }
+
+  async del(key: string) {
+    try {
+      return await kv.del(key);
+    } catch (e) {
+      console.error("KV del error:", e);
+      return 0;
+    }
+  }
+
+  async lpush(key: string, value: string) {
+    try {
+      return await kv.lpush(key, value);
+    } catch (e) {
+      console.error("KV lpush error:", e);
+      return 0;
+    }
+  }
+
+  async lrange(key: string, start: number, end: number) {
+    try {
+      const res = await kv.range(key, start, end);
+      return res || [];
+    } catch (e) {
+      // Fallback in case range method alias differs in SDK version
+      try {
+        const res2 = await kv.lrange(key, start, end);
+        return res2 || [];
+      } catch (err) {
+        console.error("KV lrange error:", err);
+        return [];
+      }
+    }
+  }
+
+  async lpop(key: string) {
+    try {
+      return await kv.lpop(key);
+    } catch (e) {
+      console.error("KV lpop error:", e);
       return null;
     }
   }
 
-  async keys(pattern: string) {
-    const res = await this.request(['KEYS', pattern]);
-    if (res) return res;
-    return Object.keys(this.memoryHash);
-  }
-
-  async hgetall(key: string) {
-    const res = await this.request(['HGETALL', key]);
-    if (res && Array.isArray(res)) {
-      const obj: Record<string, string> = {};
-      for (let i = 0; i < res.length; i += 2) obj[res[i]] = res[i + 1];
-      return obj;
-    }
-    return this.memoryHash[key] || {};
-  }
-
-  async hset(key: string, value: Record<string, any>) {
-    const remoteRes = await this.request(['HSET', key, ...Object.entries(value).flat()]);
-    if (remoteRes !== null) return remoteRes;
-
-    if (!this.memoryHash[key]) this.memoryHash[key] = {};
-    for (const [k, v] of Object.entries(value)) {
-      this.memoryHash[key][k] = String(v);
-    }
-    return 1;
-  }
-
-  async hincrby(key: string, field: string, increment: number) {
-    const remoteRes = await this.request(['HINCRBY', key, field, increment]);
-    if (remoteRes !== null) return remoteRes;
-
-    if (!this.memoryHash[key]) this.memoryHash[key] = {};
-    const cur = parseInt(this.memoryHash[key][field] || '0');
-    const next = cur + increment;
-    this.memoryHash[key][field] = String(next);
-    return next;
-  }
-
-  async exists(key: string): Promise<number> {
-    const remoteRes = await this.request(['EXISTS', key]);
-    if (remoteRes !== null) return remoteRes;
-    return this.memoryHash[key] ? 1 : 0;
-  }
-
-  async del(key: string) {
-    await this.request(['DEL', key]);
-    delete this.memoryHash[key];
-    delete this.memoryList[key.replace('player:', 'history:')];
-    return 1;
-  }
-
-  async lpush(key: string, value: string) {
-    const remoteRes = await this.request(['LPUSH', key, value]);
-    if (remoteRes !== null) return remoteRes;
-
-    if (!this.memoryList[key]) this.memoryList[key] = [];
-    this.memoryList[key].unshift(value);
-    return this.memoryList[key].length;
-  }
-
-  async lrange(key: string, start: number, end: number) {
-    const remoteRes = await this.request(['LRANGE', key, start, end]);
-    if (remoteRes) return remoteRes;
-
-    const list = this.memoryList[key] || [];
-    return end === -1 ? list : list.slice(start, end + 1);
-  }
-
-  async lpop(key: string) {
-    const remoteRes = await this.request(['LPOP', key]);
-    if (remoteRes !== null) return remoteRes;
-
-    const list = this.memoryList[key] || [];
-    return list.shift() || null;
-  }
-
   async lrem(key: string, count: number, value: string) {
-    const remoteRes = await this.request(['LREM', key, count, value]);
-    if (remoteRes !== null) return remoteRes;
-
-    const list = this.memoryList[key] || [];
-    this.memoryList[key] = list.filter((item: string) => item !== value);
-    return 1;
+    try {
+      return await kv.lrem(key, count, value);
+    } catch (e) {
+      console.error("KV lrem error:", e);
+      return 0;
+    }
   }
 }
 
-const globalForRedis = global as unknown as { redisClient: RedisClient };
-const redis = globalForRedis.redisClient || new RedisClient();
+const globalForRedis = global as unknown as { redisClient: VercelKVClient };
+const redis = globalForRedis.redisClient || new VercelKVClient();
 if (process.env.NODE_ENV !== 'production') globalForRedis.redisClient = redis;
 
 export default redis;
