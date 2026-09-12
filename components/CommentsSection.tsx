@@ -3,11 +3,14 @@ import { useState, useEffect } from "react";
 import { initializeApp, getApps, getApp } from "firebase/app";
 import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "firebase/auth";
 
-// Replace these with your actual Firebase config from console.firebase.google.com
 const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_PROJECT.firebaseapp.com",
-  projectId: "YOUR_PROJECT_ID",
+  apiKey: "AIzaSyDwL6uvQDoYcbilvM075QJVuct1Wd6PGR0",
+  authDomain: "monopoly-leaderboard-1931c.firebaseapp.com",
+  projectId: "monopoly-leaderboard-1931c",
+  storageBucket: "monopoly-leaderboard-1931c.firebasestorage.app",
+  messagingSenderId: "955552063445",
+  appId: "1:955552063445:web:2573587d953f536bea675c",
+  measurementId: "G-ZTSX8RQ5TJ"
 };
 
 // Initialize Firebase safely for Next.js
