@@ -1,5 +1,3 @@
-// lib/redis.ts
-
 // Simulated Database to make the Vercel build pass without requiring external DB setup.
 class MockDatabase {
   private hashes: Record<string, Record<string, string>> = {
@@ -66,9 +64,14 @@ class MockDatabase {
     this.lists[key] = this.lists[key].filter(v => v !== value);
     return 1;
   }
+
+  // Added missing method to handle removing wins
+  async lpop(key: string) {
+    if (!this.lists[key] || this.lists[key].length === 0) return null;
+    return this.lists[key].shift();
+  }
 }
 
-// Ensure the mock persists during development reloads
 const globalForRedis = global as unknown as { mockRedis: MockDatabase };
 const redis = globalForRedis.mockRedis || new MockDatabase();
 if (process.env.NODE_ENV !== 'production') globalForRedis.mockRedis = redis;

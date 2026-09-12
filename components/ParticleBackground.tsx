@@ -15,21 +15,23 @@ export default function ParticleBackground() {
     let mouse = { x: -1000, y: -1000 };
 
     const resize = () => {
-      canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight;
-      initParticles();
+      if (canvas) {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+        initParticles();
+      }
     };
 
     class Particle {
       x: number; y: number; size: number; density: number; vx: number; vy: number; color: string;
       constructor() {
-        this.x = Math.random() * canvas.width;
-        this.y = Math.random() * canvas.height;
+        this.x = Math.random() * window.innerWidth;
+        this.y = Math.random() * window.innerHeight;
         this.size = Math.random() * 3 + 1;
         this.density = (Math.random() * 30) + 1;
         this.vx = (Math.random() - 0.5) * 2;
         this.vy = (Math.random() - 0.5) * 2;
-        const colors = ['#facc15', '#4ade80', '#22c55e', '#ffffff']; // Gold, Green, White (Monopoly Colors)
+        const colors = ['#facc15', '#4ade80', '#22c55e', '#ffffff']; 
         this.color = colors[Math.floor(Math.random() * colors.length)];
       }
 
@@ -47,8 +49,8 @@ export default function ParticleBackground() {
         this.x += this.vx;
         this.y += this.vy;
 
-        if (this.x < 0 || this.x > canvas.width) this.vx *= -1;
-        if (this.y < 0 || this.y > canvas.height) this.vy *= -1;
+        if (this.x < 0 || this.x > window.innerWidth) this.vx *= -1;
+        if (this.y < 0 || this.y > window.innerHeight) this.vy *= -1;
 
         let dx = mouse.x - this.x;
         let dy = mouse.y - this.y;
@@ -67,14 +69,16 @@ export default function ParticleBackground() {
 
     const initParticles = () => {
       particles = [];
-      let numberOfParticles = (canvas.width * canvas.height) / 8000;
+      let numberOfParticles = (window.innerWidth * window.innerHeight) / 8000;
       for (let i = 0; i < numberOfParticles; i++) particles.push(new Particle());
     };
 
     const animate = () => {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      particles.forEach(p => { p.draw(); p.update(); });
-      animationFrameId = requestAnimationFrame(animate);
+      if (canvas) {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        particles.forEach(p => { p.draw(); p.update(); });
+        animationFrameId = requestAnimationFrame(animate);
+      }
     };
 
     window.addEventListener('resize', resize);
