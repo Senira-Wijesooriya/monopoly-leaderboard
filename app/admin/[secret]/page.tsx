@@ -2,17 +2,24 @@
 import { useState, useEffect } from 'react';
 import CommentsSection from '@/components/CommentsSection';
 
-const COUNTRIES = ["🌍 Global", "🇱🇰 Sri Lanka", "🇺🇸 USA", "🇬🇧 UK", "🇦🇺 Australia", "🇯🇵 Japan", "🇦🇪 UAE"];
+const COUNTRIES = [
+  "🇧🇷 Brazil", "🇮🇱 Israel", "🇮🇹 Italy", "🇩🇪 Germany", 
+  "🇨🇳 China", "🇫🇷 France", "🇬🇧 UK", "🇺🇸 USA", "🏛️ Government"
+];
 
 export default function AdminPage() {
   const [players, setPlayers] = useState<any[]>([]);
   const [name, setName] = useState('');
   const [nickname, setNickname] = useState('');
-  const [country, setCountry] = useState(COUNTRIES[0]);
+  const [country, setCountry] = useState(COUNTRIES[8]);
   const [avatarBase64, setAvatarBase64] = useState('🎩'); 
+  
+  // Custom Color State
+  const [rankColors, setRankColors] = useState<Record<string, string>>({});
 
   useEffect(() => {
     fetch('/api/leaderboard').then(res => res.json()).then(setPlayers);
+    fetch('/api/settings').then(res => res.json()).then(setRankColors);
   }, []);
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -40,9 +47,18 @@ export default function AdminPage() {
   };
 
   const deletePlayer = async (playerName: string) => {
-    if (!confirm(`WARNING: Are you sure you want to PERMANENTLY destroy ${playerName}'s properties?`)) return;
+    if (!confirm(`WARNING: Are you sure you want to PERMANENTLY destroy ${playerName}?`)) return;
     await fetch('/api/players', { method: 'DELETE', body: JSON.stringify({ name: playerName }) });
     window.location.reload();
+  };
+
+  const saveColors = async () => {
+    await fetch('/api/settings', { method: 'POST', body: JSON.stringify({ colors: rankColors }) });
+    alert("Rank colors saved successfully!");
+  };
+
+  const handleColorChange = (rank: number, hex: string) => {
+    setRankColors({ ...rankColors, [rank.toString()]: hex });
   };
 
   return (
@@ -52,6 +68,28 @@ export default function AdminPage() {
           <h1 className="text-4xl md:text-5xl font-black text-white uppercase tracking-tighter">
             MONOPOLY Administrator
           </h1>
+        </div>
+
+        {/* RANK COLOR SETTINGS */}
+        <div className="bg-white p-8 rounded-xl border-4 border-black mb-12 shadow-[12px_12px_0px_rgba(0,0,0,1)]">
+          <h2 className="text-2xl font-black mb-6 text-black uppercase tracking-tight">Leaderboard Box Colors</h2>
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 mb-6">
+            {[1,2,3,4,5,6,7,8,9,10,11,12].map(rank => (
+              <div key={rank} className="flex flex-col gap-1">
+                <label className="text-sm font-bold">Rank #{rank}</label>
+                <div className="flex gap-2 items-center">
+                  <input 
+                    type="color" 
+                    value={rankColors[rank.toString()] || '#ffffff'}
+                    onChange={(e) => handleColorChange(rank, e.target.value)}
+                    className="w-10 h-10 border-2 border-black p-0 cursor-pointer"
+                  />
+                  <span className="text-xs font-mono">{rankColors[rank.toString()] || 'Default'}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+          <button onClick={saveColors} className="px-8 py-3 bg-green-500 border-2 border-black shadow-[4px_4px_0px_rgba(0,0,0,1)] text-black font-black uppercase hover:translate-y-1 hover:shadow-none transition-all">Save Colors</button>
         </div>
         
         {/* ADD PLAYER */}
@@ -67,14 +105,13 @@ export default function AdminPage() {
             </div>
             
             <div className="flex items-center gap-4 bg-gray-100 p-4 rounded border-2 border-black">
-              <label className="font-black text-black uppercase tracking-wider">Profile Picture (JPG/PNG):</label>
+              <label className="font-black text-black uppercase tracking-wider">Profile Picture:</label>
               <input type="file" accept=".jpg,.jpeg,.png" onChange={handleImageUpload} className="text-sm font-bold file:mr-4 file:py-2 file:px-4 file:rounded file:border-2 file:border-black file:text-sm file:font-black file:bg-yellow-400 file:text-black hover:file:bg-yellow-500 cursor-pointer"/>
               <div className="ml-auto w-12 h-12 rounded-full border-2 border-black overflow-hidden flex items-center justify-center text-2xl bg-white shadow-inner">
                 {avatarBase64.startsWith('data:image') ? <img src={avatarBase64} alt="preview" className="w-full h-full object-cover"/> : avatarBase64}
               </div>
             </div>
-
-            <button type="submit" className="w-full py-4 bg-blue-600 hover:bg-blue-500 border-2 border-black shadow-[4px_4px_0px_rgba(0,0,0,1)] hover:translate-y-1 hover:shadow-none text-white rounded font-black uppercase tracking-widest transition-all mt-2">Create Player Account</button>
+            <button type="submit" className="w-full py-4 bg-blue-600 hover:bg-blue-500 border-2 border-black shadow-[4px_4px_0px_rgba(0,0,0,1)] text-white rounded font-black uppercase tracking-widest hover:translate-y-1 hover:shadow-none transition-all mt-2">Create Player</button>
           </form>
         </div>
 
@@ -94,9 +131,9 @@ export default function AdminPage() {
                   </div>
                 </div>
                 <div className="flex gap-2">
-                  <button onClick={() => updateWin(p.name, 'win')} className="w-10 h-10 bg-green-500 border-2 border-black shadow-[2px_2px_0px_rgba(0,0,0,1)] hover:translate-y-0.5 hover:shadow-none rounded font-black text-xl flex items-center justify-center text-black" title="Add Win">+</button>
-                  <button onClick={() => updateWin(p.name, 'lose')} className="w-10 h-10 bg-orange-500 border-2 border-black shadow-[2px_2px_0px_rgba(0,0,0,1)] hover:translate-y-0.5 hover:shadow-none rounded font-black text-xl flex items-center justify-center text-black" title="Remove Win">-</button>
-                  <button onClick={() => deletePlayer(p.name)} className="w-10 h-10 bg-red-600 border-2 border-black shadow-[2px_2px_0px_rgba(0,0,0,1)] hover:translate-y-0.5 hover:shadow-none rounded font-black text-xl flex items-center justify-center text-white ml-2" title="Delete Player">X</button>
+                  <button onClick={() => updateWin(p.name, 'win')} className="w-10 h-10 bg-green-500 border-2 border-black shadow-[2px_2px_0px_rgba(0,0,0,1)] hover:translate-y-0.5 hover:shadow-none rounded font-black text-xl flex items-center justify-center text-black">+</button>
+                  <button onClick={() => updateWin(p.name, 'lose')} className="w-10 h-10 bg-orange-500 border-2 border-black shadow-[2px_2px_0px_rgba(0,0,0,1)] hover:translate-y-0.5 hover:shadow-none rounded font-black text-xl flex items-center justify-center text-black">-</button>
+                  <button onClick={() => deletePlayer(p.name)} className="w-10 h-10 bg-red-600 border-2 border-black shadow-[2px_2px_0px_rgba(0,0,0,1)] hover:translate-y-0.5 hover:shadow-none rounded font-black text-xl flex items-center justify-center text-white ml-2">X</button>
                 </div>
               </div>
             ))}
