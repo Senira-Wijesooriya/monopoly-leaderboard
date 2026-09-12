@@ -1,38 +1,40 @@
 import { kv } from '@vercel/kv';
 
-// Wrapper class using official @vercel/kv SDK for bulletproof persistence
 class VercelKVClient {
-  async keys(pattern: string) {
+  async keys(pattern: string): Promise<string[]> {
     try {
-      return await kv.keys(pattern);
+      const res = await kv.keys(pattern);
+      return (res as string[]) || [];
     } catch (e) {
       console.error("KV keys error:", e);
       return [];
     }
   }
 
-  async hgetall(key: string) {
+  async hgetall(key: string): Promise<Record<string, string>> {
     try {
       const data = await kv.hgetall(key);
-      return data || {};
+      return (data as Record<string, string>) || {};
     } catch (e) {
       console.error("KV hgetall error:", e);
       return {};
     }
   }
 
-  async hset(key: string, value: Record<string, any>) {
+  async hset(key: string, value: Record<string, any>): Promise<number> {
     try {
-      return await kv.hset(key, value);
+      const res = await kv.hset(key, value);
+      return typeof res === 'number' ? res : 1;
     } catch (e) {
       console.error("KV hset error:", e);
       return 0;
     }
   }
 
-  async hincrby(key: string, field: string, increment: number) {
+  async hincrby(key: string, field: string, increment: number): Promise<number> {
     try {
-      return await kv.hincrby(key, field, increment);
+      const res = await kv.hincrby(key, field, increment);
+      return typeof res === 'number' ? res : 0;
     } catch (e) {
       console.error("KV hincrby error:", e);
       return 0;
@@ -49,52 +51,50 @@ class VercelKVClient {
     }
   }
 
-  async del(key: string) {
+  async del(key: string): Promise<number> {
     try {
-      return await kv.del(key);
+      const res = await kv.del(key);
+      return typeof res === 'number' ? res : 1;
     } catch (e) {
       console.error("KV del error:", e);
       return 0;
     }
   }
 
-  async lpush(key: string, value: string) {
+  async lpush(key: string, value: string): Promise<number> {
     try {
-      return await kv.lpush(key, value);
+      const res = await kv.lpush(key, value);
+      return typeof res === 'number' ? res : 1;
     } catch (e) {
       console.error("KV lpush error:", e);
       return 0;
     }
   }
 
-  async lrange(key: string, start: number, end: number) {
+  async lrange(key: string, start: number, end: number): Promise<any[]> {
     try {
-      const res = await kv.range(key, start, end);
+      const res = await kv.lrange(key, start, end);
       return res || [];
     } catch (e) {
-      // Fallback in case range method alias differs in SDK version
-      try {
-        const res2 = await kv.lrange(key, start, end);
-        return res2 || [];
-      } catch (err) {
-        console.error("KV lrange error:", err);
-        return [];
-      }
+      console.error("KV lrange error:", e);
+      return [];
     }
   }
 
-  async lpop(key: string) {
+  async lpop(key: string): Promise<string | null> {
     try {
-      return await kv.lpop(key);
+      const res = await kv.lpop(key);
+      return (res as string) || null;
     } catch (e) {
       console.error("KV lpop error:", e);
       return null;
     }
   }
 
-  async lrem(key: string, count: number, value: string) {
+  async lrem(key: string, count: number, value: string): Promise<number> {
     try {
-      return await kv.lrem(key, count, value);
+      const res = await kv.lrem(key, count, value);
+      return typeof res === 'number' ? res : 1;
     } catch (e) {
       console.error("KV lrem error:", e);
       return 0;
