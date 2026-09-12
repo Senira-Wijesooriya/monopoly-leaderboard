@@ -2,81 +2,114 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import CommentsSection from "@/components/CommentsSection";
+import Mascot from "@/components/Mascot";
+import ParticleBackground from "@/components/ParticleBackground";
+import TiltCard from "@/components/TiltCard";
 
 export default function Home() {
   const [players, setPlayers] = useState<any[]>([]);
   const [maxWins, setMaxWins] = useState(1);
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     fetch("/api/leaderboard").then(res => res.json()).then(data => {
-      setPlayers(data);
-      setMaxWins(Math.max(...data.map((p: any) => p.wins), 1));
+      const activePlayers = data.filter((p: any) => p.wins !== -999);
+      setPlayers(activePlayers);
+      setMaxWins(Math.max(...activePlayers.map((p: any) => p.wins), 1));
     });
+    const timer = setTimeout(() => setMounted(true), 100);
+    return () => clearTimeout(timer);
   }, []);
 
-  return (
-    <main className="min-h-screen bg-gray-950 text-white overflow-hidden relative font-sans pb-24">
-      
-      {/* BOUNCING / MOVING TOY ELEMENTS */}
-      <div className="absolute inset-0 pointer-events-none overflow-hidden">
-        <div className="absolute top-20 left-10 text-7xl animate-float opacity-30 drop-shadow-[0_0_15px_rgba(255,255,255,0.5)]">🎲</div>
-        <div className="absolute top-60 right-20 text-7xl animate-[float_4s_infinite] opacity-30 delay-100">🎩</div>
-        <div className="absolute bottom-40 left-1/4 text-7xl animate-[float_5s_infinite] opacity-20">🚗</div>
-        <div className="absolute top-1/3 right-1/3 text-7xl animate-[float_7s_infinite] opacity-20 delay-200">🐕</div>
-        <div className="absolute bottom-20 right-1/4 text-7xl animate-[float_6s_infinite] opacity-20 delay-300">💰</div>
-      </div>
+  const topPlayers = [...players].sort((a, b) => b.wins - a.wins).slice(0, 3);
 
-      <div className="relative z-10 container mx-auto px-4 py-16">
-        <header className="text-center mb-16">
-          <h1 className="text-6xl md:text-8xl font-black text-transparent bg-clip-text bg-gradient-to-r from-red-600 via-yellow-400 to-green-600 mb-4 uppercase tracking-tighter shadow-black">
-            Monopoly Vault
-          </h1>
-          <p className="text-xl text-gray-400 tracking-widest uppercase font-bold">Global Domination Leaderboard</p>
+  return (
+    <main className="min-h-screen bg-gray-950 text-white relative font-sans pb-24 overflow-x-hidden selection:bg-green-500/30">
+      <ParticleBackground />
+
+      <div className="relative z-10 container mx-auto px-4 py-12 max-w-6xl">
+        
+        {/* HEADER & MASCOT */}
+        <header className="flex flex-col md:flex-row items-center justify-center gap-8 mb-16">
+          <Mascot />
+          <div className="text-center md:text-left">
+            <h1 className="text-6xl md:text-7xl font-black text-transparent bg-clip-text bg-gradient-to-r from-red-600 via-yellow-400 to-green-600 mb-2 uppercase tracking-tighter drop-shadow-lg">
+              Monopoly Vault
+            </h1>
+            <p className="text-xl text-green-400 tracking-widest uppercase font-bold flex items-center justify-center md:justify-start gap-2">
+              <span className="w-2 h-2 bg-green-500 rounded-full animate-ping"></span>
+              Live Global Rankings
+            </p>
+          </div>
         </header>
 
-        {/* CREATIVE DASHBOARD - ANIMATED CHARTS */}
-        <div className="flex flex-col md:flex-row items-end justify-center gap-6 mb-24 h-64 border-b-4 border-green-600/30 pb-4 max-w-4xl mx-auto">
-          {players.map((player: any) => {
-            const h = (player.wins / maxWins) * 100;
-            return (
-              <div key={player.name} className="flex flex-col items-center group w-24">
-                <span className="mb-2 font-black text-2xl opacity-0 group-hover:opacity-100 transition-opacity text-yellow-400 drop-shadow-md">
-                  {player.wins}
-                </span>
-                <div 
-                  className="w-full bg-gradient-to-t from-green-800 to-green-400 rounded-t-md relative transition-all duration-1000 ease-out hover:brightness-125 border-x-2 border-t-2 border-black/50 shadow-[0_0_15px_rgba(74,222,128,0.2)]"
-                  style={{ height: `${h}%`, minHeight: '15%' }}
-                />
-                <div className="mt-4 flex flex-col items-center">
-                   <div className="text-3xl drop-shadow-lg">{player.avatar}</div>
-                   <span className="text-sm font-bold truncate mt-1 text-white">{player.name}</span>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-
-        {/* 3D PRODUCT SHOWCASE CARDS (TITLE DEEDS) */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 perspective-1000 max-w-6xl mx-auto mb-20">
-          {players.map((player: any) => (
-            <Link href={`/players/${player.name}`} key={player.name}>
-              <div className="group relative w-full h-64 transform-style-3d transition-transform duration-500 hover:-translate-y-4 hover:rotate-x-12 hover:rotate-y-12 cursor-pointer">
-                <div className="absolute inset-0 bg-white border-[6px] border-black rounded-lg shadow-2xl overflow-hidden flex flex-col">
-                  {/* Deed Header - Matches classic Monopoly card style */}
-                  <div className="h-20 bg-blue-600 w-full border-b-4 border-black flex flex-col items-center justify-center p-2">
-                     <span className="font-black text-[10px] uppercase tracking-[0.2em] text-black">TITLE DEED</span>
-                     <h2 className="text-xl font-black text-black uppercase text-center leading-tight shadow-white drop-shadow-sm">{player.name}</h2>
+        {/* ANIMATED STATS DASHBOARD (Top 3) */}
+        <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl p-6 sm:p-8 mb-16 shadow-2xl relative overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-r from-green-500/10 to-yellow-500/10 pointer-events-none" />
+          <h2 className="text-xl font-bold text-white tracking-wider uppercase mb-6 flex items-center gap-2">
+            <span className="text-2xl">👑</span> Board Tycoons
+          </h2>
+          
+          <div className="space-y-6 relative z-10">
+            {topPlayers.map((player, index) => {
+              const widthPercent = mounted ? (player.wins / maxWins) * 100 : 0;
+              return (
+                <div key={player.name} className="relative">
+                  <div className="flex justify-between text-sm mb-2 font-black uppercase tracking-widest">
+                    <span className="text-gray-200 flex items-center gap-2">
+                      {index === 0 && <span className="text-yellow-400 text-lg">🥇</span>}
+                      {index === 1 && <span className="text-gray-300 text-lg">🥈</span>}
+                      {index === 2 && <span className="text-amber-700 text-lg">🥉</span>}
+                      {player.nickname}
+                    </span>
+                    <span className="text-green-400">{player.wins} Wins</span>
                   </div>
-                  
-                  <div className="p-4 flex flex-col items-center text-center flex-1 justify-center bg-[#D8E8D8]">
-                    <div className="text-4xl mb-2 drop-shadow-md">{player.avatar}</div>
-                    <p className="text-lg text-gray-800 italic font-serif font-bold">"{player.nickname}"</p>
-                    <div className="mt-auto w-full border-t-2 border-black pt-2">
-                      <p className="text-black font-black uppercase text-sm">Rent (Wins): {player.wins}</p>
+                  <div className="h-4 w-full bg-gray-900 rounded-full overflow-hidden border border-white/10">
+                    <div 
+                      className={`h-full rounded-full bg-gradient-to-r ${
+                        index === 0 ? 'from-yellow-600 to-yellow-300' : 
+                        index === 1 ? 'from-gray-500 to-gray-300' : 
+                        'from-amber-800 to-amber-500'
+                      } transition-all duration-[1500ms] ease-out relative`}
+                      style={{ width: `${widthPercent}%`, minWidth: '5%' }}
+                    >
+                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 to-transparent -translate-x-full animate-[shimmer_2s_infinite]" />
                     </div>
                   </div>
                 </div>
-              </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* 3D HOVER LEADERBOARD LIST */}
+        <div className="space-y-4 mb-20">
+          {players.sort((a, b) => b.wins - a.wins).map((player: any, index: number) => (
+            <Link href={`/players/${player.name}`} key={player.name}>
+              <TiltCard className="group relative cursor-pointer block">
+                <div className="absolute inset-0 bg-gradient-to-r from-green-500/10 to-yellow-500/10 opacity-0 group-hover:opacity-100 rounded-xl transition-opacity duration-500" />
+                <div className="relative bg-black/40 backdrop-blur-sm border border-gray-800 group-hover:border-green-500/50 rounded-xl p-4 flex items-center gap-4">
+                  
+                  <div className="w-12 text-center font-black text-2xl text-gray-600 group-hover:text-yellow-400 transition-colors">
+                    #{index + 1}
+                  </div>
+
+                  <div className="w-14 h-14 rounded-full overflow-hidden border-2 border-gray-700 group-hover:border-green-400 flex items-center justify-center text-3xl bg-gray-900 shrink-0">
+                     {player.avatar?.startsWith('data:image') ? <img src={player.avatar} alt={player.name} className="w-full h-full object-cover"/> : (player.avatar || '🎩')}
+                  </div>
+
+                  <div className="flex-grow min-w-0">
+                    <h3 className="text-xl font-black text-gray-200 truncate uppercase">{player.name}</h3>
+                    <span className="text-sm text-green-400 italic font-serif">"{player.nickname}"</span>
+                  </div>
+
+                  <div className="shrink-0 text-right pr-4">
+                    <div className="text-3xl font-black font-mono text-transparent bg-clip-text bg-gradient-to-br from-white to-gray-500">
+                      {player.wins}
+                    </div>
+                  </div>
+                </div>
+              </TiltCard>
             </Link>
           ))}
         </div>
