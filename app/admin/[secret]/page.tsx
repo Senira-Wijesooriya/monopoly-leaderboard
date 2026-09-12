@@ -100,7 +100,6 @@ export default function AdminPage() {
           </h1>
         </div>
 
-        {/* Global Settings: Most Demanding Region */}
         <div className="bg-white p-8 rounded-xl border-4 border-black mb-12 shadow-[12px_12px_0px_rgba(0,0,0,1)]">
           <h2 className="text-2xl font-black mb-4 text-black uppercase tracking-tight">Global Header Settings</h2>
           <div className="flex flex-col md:flex-row gap-4 items-center">
@@ -120,7 +119,6 @@ export default function AdminPage() {
           </div>
         </div>
         
-        {/* ADD PLAYER */}
         <div className="bg-white p-8 rounded-xl border-4 border-black mb-12 shadow-[12px_12px_0px_rgba(0,0,0,1)]">
           <h2 className="text-2xl font-black mb-6 text-black uppercase tracking-tight">Register New Tycoon</h2>
           <form onSubmit={addPlayer} className="flex flex-col gap-4">
@@ -140,7 +138,6 @@ export default function AdminPage() {
           </form>
         </div>
 
-        {/* MANAGE PLAYERS */}
         <div className="bg-white p-8 rounded-xl border-4 border-black mb-12 shadow-[12px_12px_0px_rgba(0,0,0,1)]">
           <h2 className="text-2xl font-black mb-6 text-black uppercase tracking-tight">Manage Player Profiles & Rents</h2>
           <div className="grid grid-cols-1 gap-6">
@@ -165,7 +162,6 @@ export default function AdminPage() {
                   </div>
                 </div>
 
-                {/* Inline Edits for Country, Color, and Gaming Tags */}
                 {editStates[p.name] && (
                   <div className="flex flex-col md:flex-row items-center gap-3 bg-white p-4 border-2 border-black rounded">
                     <select 

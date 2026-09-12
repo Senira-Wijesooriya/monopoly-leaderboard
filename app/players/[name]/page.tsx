@@ -34,33 +34,32 @@ const CAPTIONS = [
   "I consider buying coffee as a business expense."
 ];
 
-function getFlagBackgroundUrl(country: string) {
-  if (country.includes("Brazil")) return "https://flagcdn.com/w1280/br.png";
-  if (country.includes("Israel")) return "https://flagcdn.com/w1280/il.png";
-  if (country.includes("Italy")) return "https://flagcdn.com/w1280/it.png";
-  if (country.includes("Germany")) return "https://flagcdn.com/w1280/de.png";
-  if (country.includes("China")) return "https://flagcdn.com/w1280/cn.png";
-  if (country.includes("France")) return "https://flagcdn.com/w1280/fr.png";
-  if (country.includes("UK")) return "https://flagcdn.com/w1280/gb.png";
-  if (country.includes("USA")) return "https://flagcdn.com/w1280/us.png";
-  return "https://upload.wikimedia.org/wikipedia/commons/thumb/c/ce/Icon_of_a_classical_building.svg/1024px-Icon_of_a_classical_building.svg.png";
+function getCountryInfo(country: string) {
+  if (country.includes("Brazil")) return { name: "Brazil", flag: "https://flagcdn.com/w1280/br.png" };
+  if (country.includes("Israel")) return { name: "Israel", flag: "https://flagcdn.com/w1280/il.png" };
+  if (country.includes("Italy")) return { name: "Italy", flag: "https://flagcdn.com/w1280/it.png" };
+  if (country.includes("Germany")) return { name: "Germany", flag: "https://flagcdn.com/w1280/de.png" };
+  if (country.includes("China")) return { name: "China", flag: "https://flagcdn.com/w1280/cn.png" };
+  if (country.includes("France")) return { name: "France", flag: "https://flagcdn.com/w1280/fr.png" };
+  if (country.includes("UK")) return { name: "United Kingdom", flag: "https://flagcdn.com/w1280/gb.png" };
+  if (country.includes("USA")) return { name: "United States", flag: "https://flagcdn.com/w1280/us.png" };
+  return { name: "Government", flag: "https://upload.wikimedia.org/wikipedia/commons/thumb/c/ce/Icon_of_a_classical_building.svg/1024px-Icon_of_a_classical_building.svg.png" };
 }
 
 export default async function PlayerPage({ params }: { params: { name: string } }) {
-  // Correctly decode URL parameter spaces and special characters
   const name = decodeURIComponent(params.name || '').trim();
   const data = await redis.hgetall(`player:${name}`) as Record<string, string>;
   
   const nickname = data?.nickname || 'The Tycoon';
   const avatar = data?.avatar || '🎩';
-  const country = data?.country || '🏛️ Government';
+  const countryStr = data?.country || '🏛️ Government';
+  const countryInfo = getCountryInfo(countryStr);
   
   let gamingTags = [];
   try { gamingTags = JSON.parse(data?.gamingTags || '[]'); } catch(e) {}
 
   const history = await redis.lrange(`history:${name}`, 0, -1) as string[];
   const randomCaption = CAPTIONS[Math.floor(Math.random() * CAPTIONS.length)];
-  const backgroundUrl = getFlagBackgroundUrl(country);
 
   return (
     <main className="min-h-screen bg-[#cfe0e0] text-black p-8 relative overflow-hidden font-sans">
@@ -70,9 +69,10 @@ export default async function PlayerPage({ params }: { params: { name: string } 
         </Link>
         
         <div className="bg-white border-4 border-black rounded-sm p-10 mb-12 shadow-[12px_12px_0px_rgba(0,0,0,1)] text-center relative overflow-hidden flex flex-col items-center">
+          {/* Flag Watermark Background */}
           <div 
             className="absolute inset-0 z-0 opacity-20 bg-center bg-no-repeat bg-contain m-8"
-            style={{ backgroundImage: `url(${backgroundUrl})` }}
+            style={{ backgroundImage: `url(${countryInfo.flag})` }}
           />
 
           <div className="absolute top-0 left-0 w-full h-8 bg-red-600 border-b-4 border-black flex items-center justify-center z-10">
@@ -80,7 +80,7 @@ export default async function PlayerPage({ params }: { params: { name: string } 
           </div>
           
           <div className="w-32 h-32 mx-auto rounded-full border-4 border-black overflow-hidden flex items-center justify-center text-6xl bg-gray-100 mb-6 mt-6 z-10 shadow-lg">
-             {avatar?.startsWith('data:image') ? <img src={avatar} alt={name} className="w-full h-full object-cover"/> : (avatar || '🎩')}
+             {avatar?.startsWith('data:image') ? <img src={avatar} alt={name} className="w-full h-full object-cover"/> : avatar}
           </div>
           
           <h1 className="text-5xl md:text-6xl font-black uppercase text-black tracking-tighter z-10">{name}</h1>
@@ -96,8 +96,10 @@ export default async function PlayerPage({ params }: { params: { name: string } 
             </div>
           )}
 
-          <div className="inline-block bg-yellow-400 border-2 border-black font-black px-4 py-1 uppercase shadow-[4px_4px_0px_rgba(0,0,0,1)] mb-8 z-10">
-            Primary Market: {country}
+          {/* Primary Market Badge with Flag */}
+          <div className="inline-flex items-center gap-2 bg-yellow-400 border-2 border-black font-black px-4 py-2 uppercase shadow-[4px_4px_0px_rgba(0,0,0,1)] mb-8 z-10 text-lg">
+            <img src={countryInfo.flag} alt={countryInfo.name} className="w-6 h-4 object-cover border border-black" />
+            Primary Market: {countryStr}
           </div>
 
           <div className="w-full border-t-2 border-black border-dashed pt-6 z-10 mt-auto">
@@ -114,7 +116,7 @@ export default async function PlayerPage({ params }: { params: { name: string } 
         <div className="space-y-4">
           {history.length === 0 ? (
             <div className="bg-white p-6 border-4 border-black shadow-[4px_4px_0px_rgba(0,0,0,1)]">
-              <p className="text-gray-500 font-bold text-xl uppercase text-center">No properties acquired yet. Do not pass GO.</p>
+              <p className="text-gray-500 font-bold text-xl uppercase text-center">No matches recorded yet. Do not pass GO.</p>
             </div>
           ) : (
             history.map((date, i) => {
@@ -123,8 +125,8 @@ export default async function PlayerPage({ params }: { params: { name: string } 
                 <div key={i} className="p-6 bg-yellow-100 border-4 border-black flex flex-col md:flex-row items-center justify-between transform transition-transform hover:-translate-y-1 shadow-[6px_6px_0px_rgba(0,0,0,1)]">
                   <span className="text-black font-black text-2xl uppercase tracking-tighter">Victory #{history.length - i}</span>
                   <div className="text-right">
-                    <div className="text-gray-900 font-bold text-lg">{d.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</div>
-                    <div className="text-gray-600 font-black font-mono">{d.toLocaleTimeString()}</div>
+                    <div className="text-gray-900 font-bold text-lg">{isNaN(d.getTime()) ? date : d.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</div>
+                    <div className="text-gray-600 font-black font-mono">{isNaN(d.getTime()) ? '' : d.toLocaleTimeString()}</div>
                   </div>
                 </div>
               )

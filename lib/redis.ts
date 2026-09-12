@@ -1,85 +1,102 @@
-class MockDatabase {
-  private hashes: Record<string, Record<string, string>> = {
-    'player:Senira': { wins: '5', nickname: 'The Mastermind', avatar: '🎩', country: '🇱🇰 Sri Lanka' }
+class RedisClient {
+  private url = process.env.UPSTASH_REDIS_REST_URL || '';
+  private token = process.env.UPSTASH_REDIS_REST_TOKEN || '';
+  private memoryHash: Record<string, Record<string, string>> = {
+    'player:Senira': { wins: '3', nickname: 'The Mastermind', avatar: '🎩', country: '🇧🇷 Brazil', color: '#facc15', gamingTags: '["Hacker","Tycoon"]' }
   };
-  private lists: Record<string, string[]> = {
+  private memoryList: Record<string, string[]> = {
     'history:Senira': [new Date().toISOString()]
   };
-  private comments: string[] = [];
+  private memoryComments: string[] = [];
+
+  private async request(command: any[]) {
+    if (!this.url || !this.token) return null;
+    try {
+      const res = await fetch(this.url, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${this.token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify(command),
+      });
+      const data = await res.json();
+      return data.result;
+    } catch (e) {
+      return null;
+    }
+  }
 
   async keys(pattern: string) {
-    if (pattern === 'player:*') return Object.keys(this.hashes);
-    return [];
+    const res = await this.request(['KEYS', pattern]);
+    if (res) return res;
+    return Object.keys(this.memoryHash);
   }
 
   async hgetall(key: string) {
-    return this.hashes[key] || null;
+    const res = await this.request(['HGETALL', key]);
+    if (res && Array.isArray(res)) {
+      const obj: Record<string, string> = {};
+      for (let i = 0; i < res.length; i += 2) obj[res[i]] = res[i + 1];
+      return obj;
+    }
+    return this.memoryHash[key] || {};
   }
 
   async hset(key: string, value: Record<string, any>) {
-    if (!this.hashes[key]) this.hashes[key] = {};
+    const remoteRes = await this.request(['HSET', key, ...Object.entries(value).flat()]);
+    if (remoteRes !== null) return remoteRes;
+
+    if (!this.memoryHash[key]) this.memoryHash[key] = {};
     for (const [k, v] of Object.entries(value)) {
-      this.hashes[key][k] = String(v);
+      this.memoryHash[key][k] = String(v);
     }
     return 1;
   }
 
   async hincrby(key: string, field: string, increment: number) {
-    if (!this.hashes[key]) this.hashes[key] = {};
-    const current = parseInt(this.hashes[key][field] || '0');
-    const next = current + increment;
-    this.hashes[key][field] = String(next);
+    const remoteRes = await this.request(['HINCRBY', key, field, increment]);
+    if (remoteRes !== null) return remoteRes;
+
+    if (!this.memoryHash[key]) this.memoryHash[key] = {};
+    const cur = parseInt(this.memoryHash[key][field] || '0');
+    const next = cur + increment;
+    this.memoryHash[key][field] = String(next);
     return next;
   }
 
-  async exists(key: string) {
-    return this.hashes[key] ? 1 : 0;
+  async del(key: string) {
+    await this.request(['DEL', key]);
+    delete this.memoryHash[key];
+    delete this.memoryList[key.replace('player:', 'history:')];
+    return 1;
   }
 
   async lpush(key: string, value: string) {
-    if (key === 'monopoly_comments') {
-      this.comments.unshift(value);
-      return this.comments.length;
-    }
-    if (!this.lists[key]) this.lists[key] = [];
-    this.lists[key].unshift(value);
-    return this.lists[key].length;
+    const remoteRes = await this.request(['LPUSH', key, value]);
+    if (remoteRes !== null) return remoteRes;
+
+    if (!this.memoryList[key]) this.memoryList[key] = [];
+    this.memoryList[key].unshift(value);
+    return this.memoryList[key].length;
   }
 
   async lrange(key: string, start: number, end: number) {
-    if (key === 'monopoly_comments') {
-      return end === -1 ? this.comments : this.comments.slice(start, end + 1);
-    }
-    if (!this.lists[key]) return [];
-    return end === -1 ? this.lists[key] : this.lists[key].slice(start, end + 1);
-  }
+    const remoteRes = await this.request(['LRANGE', key, start, end]);
+    if (remoteRes) return remoteRes;
 
-  async lrem(key: string, count: number, value: string) {
-    if (key === 'monopoly_comments') {
-      this.comments = this.comments.filter(v => v !== value);
-      return 1;
-    }
-    if (!this.lists[key]) return 0;
-    this.lists[key] = this.lists[key].filter(v => v !== value);
-    return 1;
+    const list = this.memoryList[key] || [];
+    return end === -1 ? list : list.slice(start, end + 1);
   }
 
   async lpop(key: string) {
-    if (!this.lists[key] || this.lists[key].length === 0) return null;
-    return this.lists[key].shift();
-  }
+    const remoteRes = await this.request(['LPOP', key]);
+    if (remoteRes !== null) return remoteRes;
 
-  // REAL DELETE - FIXES THE BUG
-  async del(key: string) {
-    delete this.hashes[key];
-    const historyKey = key.replace('player:', 'history:');
-    delete this.lists[historyKey];
-    return 1;
+    const list = this.memoryList[key] || [];
+    return list.shift() || null;
   }
 }
 
-const globalForRedis = global as unknown as { mockRedis: MockDatabase };
-const redis = globalForRedis.mockRedis || new MockDatabase();
-if (process.env.NODE_ENV !== 'production') globalForRedis.mockRedis = redis;
+const globalForRedis = global as unknown as { redisClient: RedisClient };
+const redis = globalForRedis.redisClient || new RedisClient();
+if (process.env.NODE_ENV !== 'production') globalForRedis.redisClient = redis;
 
 export default redis;

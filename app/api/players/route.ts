@@ -16,11 +16,13 @@ export async function POST(req: Request) {
       gamingTags: JSON.stringify(gamingTags || [])
     });
   } else if (action === 'update_profile') {
-    await redis.hset(`player:${name}`, { 
+    const updateData: Record<string, any> = { 
       country: country || '🏛️ Government', 
       color: color || '#ffffff',
       gamingTags: JSON.stringify(gamingTags || [])
-    });
+    };
+    if (avatar) updateData.avatar = avatar; // Keeps existing avatar if none provided
+    await redis.hset(`player:${name}`, updateData);
   } else if (action === 'win') {
     await redis.hincrby(`player:${name}`, 'wins', 1);
     await redis.lpush(`history:${name}`, new Date().toISOString());
