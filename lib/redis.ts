@@ -1,7 +1,6 @@
-// Simulated Database to make the Vercel build pass without requiring external DB setup.
 class MockDatabase {
   private hashes: Record<string, Record<string, string>> = {
-    'player:Senira': { wins: '5', nickname: 'The Mastermind', avatar: '🎩' }
+    'player:Senira': { wins: '5', nickname: 'The Mastermind', avatar: '🎩', country: '🇱🇰 Sri Lanka' }
   };
   private lists: Record<string, string[]> = {
     'history:Senira': [new Date().toISOString()]
@@ -65,10 +64,17 @@ class MockDatabase {
     return 1;
   }
 
-  // Added missing method to handle removing wins
   async lpop(key: string) {
     if (!this.lists[key] || this.lists[key].length === 0) return null;
     return this.lists[key].shift();
+  }
+
+  // REAL DELETE - FIXES THE BUG
+  async del(key: string) {
+    delete this.hashes[key];
+    const historyKey = key.replace('player:', 'history:');
+    delete this.lists[historyKey];
+    return 1;
   }
 }
 

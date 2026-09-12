@@ -13,3 +13,31 @@
   50% { transform: translateY(-20px) rotate(10deg); }
 }
 .animate-float { animation: float 6s ease-in-out infinite; }
+
+/* Keep your existing CSS at the top... then add this: */
+
+@keyframes money-fall {
+  0% { transform: translateY(-10vh) rotate(0deg); opacity: 1; }
+  100% { transform: translateY(110vh) rotate(360deg); opacity: 0; }
+}
+
+@keyframes money-shoot {
+  0% { right: -50px; top: 50%; transform: scale(0.5) rotate(0deg); opacity: 1; }
+  100% { right: 110vw; top: 30%; transform: scale(1.5) rotate(-1080deg); opacity: 0; }
+}
+
+.animate-money-fall {
+  position: fixed;
+  animation: money-fall 3s linear forwards;
+  z-index: 100;
+  font-size: 2rem;
+  pointer-events: none;
+}
+
+.animate-money-shoot {
+  position: fixed;
+  animation: money-shoot 1.5s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+  z-index: 101;
+  font-size: 3rem;
+  pointer-events: none;
+}
