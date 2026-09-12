@@ -7,7 +7,7 @@ export async function POST(req: Request) {
   if (action === 'init') {
     const exists = await redis.exists(`player:${name}`);
     if (!exists) {
-      await redis.hset(`player:${name}`, { wins: 0, nickname, avatar });
+      await redis.hset(`player:${name}`, { wins: 0, nickname, avatar, country: '🏛️ Government', color: '#ffffff' });
     } else {
       await redis.hset(`player:${name}`, { nickname, avatar });
     }

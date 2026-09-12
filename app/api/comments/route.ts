@@ -5,7 +5,7 @@ export const dynamic = 'force-dynamic';
 
 export async function GET() {
   const comments = await redis.lrange('monopoly_comments', 0, -1);
-  return NextResponse.json(comments.map(c => JSON.parse(c as string)));
+  return NextResponse.json((comments || []).map((c: any) => JSON.parse(c as string)));
 }
 
 export async function POST(req: Request) {
@@ -18,7 +18,7 @@ export async function POST(req: Request) {
 export async function DELETE(req: Request) {
   const { id } = await req.json();
   const comments = await redis.lrange('monopoly_comments', 0, -1);
-  for (const c of comments) {
+  for (const c of (comments || [])) {
     const parsed = JSON.parse(c as string);
     if (parsed.id === id) {
       await redis.lrem('monopoly_comments', 1, c);

@@ -5,9 +5,9 @@ class RedisClient {
     'player:Senira': { wins: '3', nickname: 'The Mastermind', avatar: '🎩', country: '🇧🇷 Brazil', color: '#facc15', gamingTags: '["Hacker","Tycoon"]' }
   };
   private memoryList: Record<string, string[]> = {
-    'history:Senira': [new Date().toISOString()]
+    'history:Senira': [new Date().toISOString()],
+    'monopoly_comments': []
   };
-  private memoryComments: string[] = [];
 
   private async request(command: any[]) {
     if (!this.url || !this.token) return null;
@@ -62,6 +62,12 @@ class RedisClient {
     return next;
   }
 
+  async exists(key: string): Promise<number> {
+    const remoteRes = await this.request(['EXISTS', key]);
+    if (remoteRes !== null) return remoteRes;
+    return this.memoryHash[key] ? 1 : 0;
+  }
+
   async del(key: string) {
     await this.request(['DEL', key]);
     delete this.memoryHash[key];
@@ -92,6 +98,15 @@ class RedisClient {
 
     const list = this.memoryList[key] || [];
     return list.shift() || null;
+  }
+
+  async lrem(key: string, count: number, value: string) {
+    const remoteRes = await this.request(['LREM', key, count, value]);
+    if (remoteRes !== null) return remoteRes;
+
+    const list = this.memoryList[key] || [];
+    this.memoryList[key] = list.filter((item: string) => item !== value);
+    return 1;
   }
 }
 

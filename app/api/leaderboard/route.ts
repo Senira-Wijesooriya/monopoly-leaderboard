@@ -9,7 +9,7 @@ export async function GET() {
     if (!keys || keys.length === 0) return NextResponse.json([]);
     
     const players = await Promise.all(
-      keys.map(async (key) => {
+      keys.map(async (key: string) => {
         const name = key.replace('player:', '');
         const data = await redis.hgetall(key) as Record<string, string>;
         return { 
@@ -18,7 +18,8 @@ export async function GET() {
           nickname: data?.nickname || 'The Tycoon',
           avatar: data?.avatar || '🎩',
           country: data?.country || '🏛️ Government',
-          color: data?.color || '#ffffff'
+          color: data?.color || '#ffffff',
+          gamingTags: data?.gamingTags || '[]'
         };
       })
     );
