@@ -1,15 +1,29 @@
-import { NextResponse } from "next/server";
-import { getLeaderboard } from "@/lib/redis";
+import { NextResponse } from 'next/server';
+import redis from '@/lib/redis';
 
-// Always read fresh data — this is a live leaderboard, not a static page.
-export const dynamic = "force-dynamic";
+export const dynamic = 'force-dynamic';
 
 export async function GET() {
   try {
-    const data = await getLeaderboard();
-    return NextResponse.json(data);
-  } catch (err) {
-    console.error(err);
-    return NextResponse.json({ error: "Failed to load leaderboard" }, { status: 500 });
+    const keys = await redis.keys('player:*');
+    if (!keys || keys.length === 0) return NextResponse.json([]);
+    
+    const players = await Promise.all(
+      keys.map(async (key) => {
+        const name = key.replace('player:', '');
+        const data = await redis.hgetall(key) as Record<string, string>;
+        return { 
+          name, 
+          wins: parseInt(data?.wins || '0'),
+          nickname: data?.nickname || 'The Tycoon',
+          avatar: data?.avatar || '🎩' 
+        };
+      })
+    );
+    
+    players.sort((a, b) => b.wins - a.wins);
+    return NextResponse.json(players);
+  } catch (error) {
+    return NextResponse.json({ error: 'Failed to fetch' }, { status: 500 });
   }
 }
