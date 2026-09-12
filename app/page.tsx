@@ -2,11 +2,10 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import CommentsSection from "@/components/CommentsSection";
-import Mascot from "@/components/Mascot";
+import MascotVideo from "@/components/MascotVideo";
 import ParticleBackground from "@/components/ParticleBackground";
 import TiltCard from "@/components/TiltCard";
 
-// Rank Title Generator
 function getRankTitle(rank: number, total: number) {
   if (rank === 1) return "UndeFeated Tycoon";
   if (rank === 2) return "Billionaire Beast";
@@ -29,11 +28,9 @@ function getRankTitle(rank: number, total: number) {
 
 export default function Home() {
   const [players, setPlayers] = useState<any[]>([]);
-  const [rankColors, setRankColors] = useState<Record<string, string>>({});
   const [topCountry, setTopCountry] = useState("🏛️ Government");
 
   useEffect(() => {
-    // Fetch leaderboard
     fetch("/api/leaderboard").then(res => res.json()).then(data => {
       setPlayers(data);
       if (data.length > 0) {
@@ -45,11 +42,6 @@ export default function Home() {
         const max = Object.keys(countryCounts).reduce((a, b) => countryCounts[a] > countryCounts[b] ? a : b);
         setTopCountry(max);
       }
-    });
-
-    // Fetch Custom Colors
-    fetch("/api/settings").then(res => res.json()).then(colors => {
-      setRankColors(colors);
     });
   }, []);
 
@@ -66,7 +58,7 @@ export default function Home() {
         </div>
 
         <header className="flex flex-col md:flex-row items-center justify-center gap-8 mb-16">
-          <Mascot />
+          <MascotVideo />
           <div className="text-center md:text-left flex flex-col items-center md:items-start">
             <div className="bg-red-600 border-4 border-white outline outline-4 outline-black shadow-[8px_8px_0px_rgba(0,0,0,1)] px-8 py-2 transform -rotate-2 mb-4 hover:rotate-0 transition-transform cursor-pointer">
               <h1 className="text-6xl md:text-8xl font-black text-white uppercase tracking-tighter">
@@ -82,8 +74,8 @@ export default function Home() {
         <div className="space-y-6 mb-20">
           {players.sort((a, b) => b.wins - a.wins).map((player: any, index: number) => {
             const rank = index + 1;
-            // Determine box color from Admin settings, with fallbacks
-            const boxColor = rankColors[rank] || (rank === 1 ? '#facc15' : rank === 2 ? '#d1d5db' : rank === 3 ? '#fb923c' : '#dbeafe');
+            // Use player's assigned color or default to white
+            const boxColor = player.color && player.color !== '#ffffff' ? player.color : '#ffffff';
 
             return (
               <div key={player.name}>
@@ -105,7 +97,6 @@ export default function Home() {
                       <div className="flex-grow min-w-0">
                         <h3 className="text-2xl font-black text-black truncate uppercase tracking-tight">{player.name}</h3>
                         <div className="flex items-center gap-3 mt-1">
-                          {/* New Dynamic Rank Title */}
                           <span className="text-sm text-gray-900 font-bold bg-gray-200 px-2 py-0.5 rounded border border-gray-400 uppercase tracking-widest shadow-sm">
                             {getRankTitle(rank, players.length)}
                           </span>
@@ -114,7 +105,7 @@ export default function Home() {
                       </div>
 
                       <div className="shrink-0 text-right pr-4">
-                        <div className="text-sm font-bold text-gray-500 uppercase tracking-widest mb-1">Properties</div>
+                        <div className="text-sm font-bold text-gray-500 uppercase tracking-widest mb-1">Wins</div>
                         <div className="text-4xl font-black font-mono text-green-600 drop-shadow-sm">
                           {player.wins}
                         </div>

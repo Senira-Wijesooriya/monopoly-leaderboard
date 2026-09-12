@@ -16,7 +16,9 @@ export async function GET() {
           name, 
           wins: parseInt(data?.wins || '0'),
           nickname: data?.nickname || 'The Tycoon',
-          avatar: data?.avatar || '🎩' 
+          avatar: data?.avatar || '🎩',
+          country: data?.country || '🏛️ Government',
+          color: data?.color || '#ffffff'
         };
       })
     );

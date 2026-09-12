@@ -1,11 +1,17 @@
 import { NextResponse } from 'next/server';
 import redis from '@/lib/redis';
 
+export const dynamic = 'force-dynamic';
+
 export async function POST(req: Request) {
-  const { name, nickname, avatar, country, action } = await req.json();
+  const { name, nickname, avatar, country, color, action } = await req.json();
   
-  if (action === 'add' || action === 'update') {
-    await redis.hset(`player:${name}`, { wins: 0, nickname, avatar, country: country || '🌍 Global' });
+  if (action === 'add') {
+    // Defaults to Government and White color on creation
+    await redis.hset(`player:${name}`, { wins: 0, nickname, avatar, country: '🏛️ Government', color: '#ffffff' });
+  } else if (action === 'update_profile') {
+    // Updates just the country and color for a specific user
+    await redis.hset(`player:${name}`, { country, color });
   } else if (action === 'win') {
     await redis.hincrby(`player:${name}`, 'wins', 1);
     await redis.lpush(`history:${name}`, new Date().toISOString());

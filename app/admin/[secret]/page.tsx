@@ -11,15 +11,21 @@ export default function AdminPage() {
   const [players, setPlayers] = useState<any[]>([]);
   const [name, setName] = useState('');
   const [nickname, setNickname] = useState('');
-  const [country, setCountry] = useState(COUNTRIES[8]);
   const [avatarBase64, setAvatarBase64] = useState('🎩'); 
   
-  // Custom Color State
-  const [rankColors, setRankColors] = useState<Record<string, string>>({});
+  // Track inline edits for Country & Color
+  const [editStates, setEditStates] = useState<Record<string, { country: string, color: string }>>({});
 
   useEffect(() => {
-    fetch('/api/leaderboard').then(res => res.json()).then(setPlayers);
-    fetch('/api/settings').then(res => res.json()).then(setRankColors);
+    fetch('/api/leaderboard').then(res => res.json()).then(data => {
+      setPlayers(data);
+      // Initialize edit states for each player
+      const initialEdits: Record<string, { country: string, color: string }> = {};
+      data.forEach((p: any) => {
+        initialEdits[p.name] = { country: p.country || COUNTRIES[8], color: p.color || '#ffffff' };
+      });
+      setEditStates(initialEdits);
+    });
   }, []);
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -36,8 +42,18 @@ export default function AdminPage() {
     if (!name.trim() || !nickname.trim()) return alert("Name and Nickname required");
     await fetch('/api/players', { 
       method: 'POST', 
-      body: JSON.stringify({ name, nickname, avatar: avatarBase64, country, action: 'add' }) 
+      body: JSON.stringify({ name, nickname, avatar: avatarBase64, action: 'add' }) 
     });
+    window.location.reload();
+  };
+
+  const savePlayerProfile = async (playerName: string) => {
+    const state = editStates[playerName];
+    await fetch('/api/players', { 
+      method: 'POST', 
+      body: JSON.stringify({ name: playerName, country: state.country, color: state.color, action: 'update_profile' }) 
+    });
+    alert(`${playerName}'s Profile Saved!`);
     window.location.reload();
   };
 
@@ -52,15 +68,6 @@ export default function AdminPage() {
     window.location.reload();
   };
 
-  const saveColors = async () => {
-    await fetch('/api/settings', { method: 'POST', body: JSON.stringify({ colors: rankColors }) });
-    alert("Rank colors saved successfully!");
-  };
-
-  const handleColorChange = (rank: number, hex: string) => {
-    setRankColors({ ...rankColors, [rank.toString()]: hex });
-  };
-
   return (
     <div className="min-h-screen bg-[#cfe0e0] text-black p-8 font-sans pb-24">
       <div className="max-w-5xl mx-auto">
@@ -68,28 +75,6 @@ export default function AdminPage() {
           <h1 className="text-4xl md:text-5xl font-black text-white uppercase tracking-tighter">
             MONOPOLY Administrator
           </h1>
-        </div>
-
-        {/* RANK COLOR SETTINGS */}
-        <div className="bg-white p-8 rounded-xl border-4 border-black mb-12 shadow-[12px_12px_0px_rgba(0,0,0,1)]">
-          <h2 className="text-2xl font-black mb-6 text-black uppercase tracking-tight">Leaderboard Box Colors</h2>
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 mb-6">
-            {[1,2,3,4,5,6,7,8,9,10,11,12].map(rank => (
-              <div key={rank} className="flex flex-col gap-1">
-                <label className="text-sm font-bold">Rank #{rank}</label>
-                <div className="flex gap-2 items-center">
-                  <input 
-                    type="color" 
-                    value={rankColors[rank.toString()] || '#ffffff'}
-                    onChange={(e) => handleColorChange(rank, e.target.value)}
-                    className="w-10 h-10 border-2 border-black p-0 cursor-pointer"
-                  />
-                  <span className="text-xs font-mono">{rankColors[rank.toString()] || 'Default'}</span>
-                </div>
-              </div>
-            ))}
-          </div>
-          <button onClick={saveColors} className="px-8 py-3 bg-green-500 border-2 border-black shadow-[4px_4px_0px_rgba(0,0,0,1)] text-black font-black uppercase hover:translate-y-1 hover:shadow-none transition-all">Save Colors</button>
         </div>
         
         {/* ADD PLAYER */}
@@ -99,9 +84,6 @@ export default function AdminPage() {
             <div className="flex flex-col md:flex-row gap-4">
               <input placeholder="Real Name" value={name} onChange={e => setName(e.target.value)} required className="flex-1 p-4 rounded bg-gray-100 border-2 border-black font-bold focus:bg-white" />
               <input placeholder="Nickname" value={nickname} onChange={e => setNickname(e.target.value)} required className="flex-1 p-4 rounded bg-gray-100 border-2 border-black font-bold focus:bg-white" />
-              <select value={country} onChange={e => setCountry(e.target.value)} className="flex-1 p-4 rounded bg-gray-100 border-2 border-black font-bold cursor-pointer">
-                {COUNTRIES.map(c => <option key={c} value={c}>{c}</option>)}
-              </select>
             </div>
             
             <div className="flex items-center gap-4 bg-gray-100 p-4 rounded border-2 border-black">
@@ -117,23 +99,48 @@ export default function AdminPage() {
 
         {/* MANAGE PLAYERS */}
         <div className="bg-white p-8 rounded-xl border-4 border-black mb-12 shadow-[12px_12px_0px_rgba(0,0,0,1)]">
-          <h2 className="text-2xl font-black mb-6 text-black uppercase tracking-tight">Manage Properties & Rents</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <h2 className="text-2xl font-black mb-6 text-black uppercase tracking-tight">Manage Player Profiles & Rents</h2>
+          <div className="grid grid-cols-1 gap-6">
             {players.map(p => (
-              <div key={p.name} className="flex items-center justify-between p-4 bg-yellow-100 border-2 border-black shadow-[4px_4px_0px_rgba(0,0,0,1)] rounded-lg">
-                <div className="flex items-center gap-4">
+              <div key={p.name} className="flex flex-col md:flex-row items-center justify-between p-4 bg-yellow-100 border-2 border-black shadow-[4px_4px_0px_rgba(0,0,0,1)] rounded-lg">
+                
+                {/* Player Identity */}
+                <div className="flex items-center gap-4 w-full md:w-auto mb-4 md:mb-0">
                   <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-black flex items-center justify-center text-2xl bg-white shrink-0">
                     {p.avatar?.startsWith('data:image') ? <img src={p.avatar} alt={p.name} className="w-full h-full object-cover"/> : (p.avatar || '🎩')}
                   </div>
                   <div>
                     <div className="font-black text-lg uppercase leading-none">{p.name}</div>
-                    <div className="text-sm font-bold text-gray-700">{p.country} | Wins: {p.wins}</div>
+                    <div className="text-sm font-bold text-gray-700">Wins: {p.wins}</div>
                   </div>
                 </div>
-                <div className="flex gap-2">
-                  <button onClick={() => updateWin(p.name, 'win')} className="w-10 h-10 bg-green-500 border-2 border-black shadow-[2px_2px_0px_rgba(0,0,0,1)] hover:translate-y-0.5 hover:shadow-none rounded font-black text-xl flex items-center justify-center text-black">+</button>
-                  <button onClick={() => updateWin(p.name, 'lose')} className="w-10 h-10 bg-orange-500 border-2 border-black shadow-[2px_2px_0px_rgba(0,0,0,1)] hover:translate-y-0.5 hover:shadow-none rounded font-black text-xl flex items-center justify-center text-black">-</button>
-                  <button onClick={() => deletePlayer(p.name)} className="w-10 h-10 bg-red-600 border-2 border-black shadow-[2px_2px_0px_rgba(0,0,0,1)] hover:translate-y-0.5 hover:shadow-none rounded font-black text-xl flex items-center justify-center text-white ml-2">X</button>
+
+                {/* Profile Controls (Country & Color) */}
+                {editStates[p.name] && (
+                  <div className="flex items-center gap-2 bg-white p-2 border-2 border-black rounded w-full md:w-auto mb-4 md:mb-0">
+                    <select 
+                      value={editStates[p.name].country} 
+                      onChange={e => setEditStates({...editStates, [p.name]: { ...editStates[p.name], country: e.target.value }})}
+                      className="p-2 border-2 border-black font-bold cursor-pointer bg-gray-100"
+                    >
+                      {COUNTRIES.map(c => <option key={c} value={c}>{c}</option>)}
+                    </select>
+                    <input 
+                      type="color" 
+                      title="Player Box Color"
+                      value={editStates[p.name].color}
+                      onChange={e => setEditStates({...editStates, [p.name]: { ...editStates[p.name], color: e.target.value }})}
+                      className="w-10 h-10 border-2 border-black p-0 cursor-pointer"
+                    />
+                    <button onClick={() => savePlayerProfile(p.name)} className="bg-blue-600 text-white px-4 py-2 font-black border-2 border-black uppercase text-sm">Save</button>
+                  </div>
+                )}
+
+                {/* Match Controls */}
+                <div className="flex gap-2 w-full md:w-auto justify-end">
+                  <button onClick={() => updateWin(p.name, 'win')} className="w-10 h-10 bg-green-500 border-2 border-black shadow-[2px_2px_0px_rgba(0,0,0,1)] hover:translate-y-0.5 hover:shadow-none rounded font-black text-xl flex items-center justify-center text-black" title="Add Win">+</button>
+                  <button onClick={() => updateWin(p.name, 'lose')} className="w-10 h-10 bg-orange-500 border-2 border-black shadow-[2px_2px_0px_rgba(0,0,0,1)] hover:translate-y-0.5 hover:shadow-none rounded font-black text-xl flex items-center justify-center text-black" title="Remove Win">-</button>
+                  <button onClick={() => deletePlayer(p.name)} className="w-10 h-10 bg-red-600 border-2 border-black shadow-[2px_2px_0px_rgba(0,0,0,1)] hover:translate-y-0.5 hover:shadow-none rounded font-black text-xl flex items-center justify-center text-white ml-2" title="Delete Player">X</button>
                 </div>
               </div>
             ))}
